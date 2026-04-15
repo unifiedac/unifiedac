@@ -1,0 +1,197 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum AuditStatus {
+  draft
+  in_progress
+  completed
+}
+
+enum TechCategory {
+  CRM
+  ERP
+  marketing
+  support
+  analytics
+  finance
+  HR
+  other
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  audits    Audit[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Audit {
+  id                    String                @id @default(cuid())
+  title                 String
+  description           String?
+  status                AuditStatus           @default(draft)
+  userId                String
+  departmentId          String
+  user                  User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  department            Department            @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  technologyStackItems  TechnologyStackItem[]
+  workflows             Workflow[]
+  painPoints            PainPoint[]
+  governanceRisks       GovernanceRisk[]
+  reportSections        ReportSection[]
+  createdAt             DateTime              @default(now())
+  updatedAt             DateTime              @updatedAt
+}
+
+model TechnologyStackItem {
+  id          String       @id @default(cuid())
+  auditId     String
+  name        String
+  vendor      String?
+  version     String?
+  category    TechCategory
+  description String?
+  audit       Audit        @relation(fields: [auditId], references: [id], onDelete: Cascade)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+}
+
+model Department {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  audits    Audit[]
+  workflows Workflow[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Workflow {
+  id             String          @id @default(cuid())
+  auditId        String
+  departmentId   String
+  name           String
+  description    String?
+  audit          Audit           @relation(fields: [auditId], references: [id], onDelete: Cascade)
+  department     Department      @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  taskBreakdowns TaskBreakdown[]
+  painPoints     PainPoint[]
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+}
+
+model TaskBreakdown {
+  id          String   @id @default(cuid())
+  workflowId  String
+  title       String
+  details     String?
+  order       Int
+  workflow    Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([workflowId, order])
+}
+
+model PainPoint {
+  id                   String                @id @default(cuid())
+  auditId              String
+  workflowId           String
+  title                String
+  description          String
+  severity             Int
+  audit                Audit                 @relation(fields: [auditId], references: [id], onDelete: Cascade)
+  workflow             Workflow              @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  dataReadiness        DataReadiness?
+  dataQualityScore     DataQualityScore?
+  integrationReadiness IntegrationReadiness?
+  aiRecommendations    AIRecommendation[]
+  opportunityScore     OpportunityScore?
+  governanceRisks      GovernanceRisk[]
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+}
+
+model DataReadiness {
+  id          String    @id @default(cuid())
+  painPointId String    @unique
+  score       Int
+  notes       String?
+  painPoint   PainPoint @relation(fields: [painPointId], references: [id], onDelete: Cascade)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model DataQualityScore {
+  id          String    @id @default(cuid())
+  painPointId String    @unique
+  score       Int
+  notes       String?
+  painPoint   PainPoint @relation(fields: [painPointId], references: [id], onDelete: Cascade)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model IntegrationReadiness {
+  id          String    @id @default(cuid())
+  painPointId String    @unique
+  score       Int
+  notes       String?
+  painPoint   PainPoint @relation(fields: [painPointId], references: [id], onDelete: Cascade)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model AIRecommendation {
+  id          String    @id @default(cuid())
+  painPointId String
+  title       String
+  rationale   String?
+  priority    Int?
+  painPoint   PainPoint @relation(fields: [painPointId], references: [id], onDelete: Cascade)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model OpportunityScore {
+  id          String    @id @default(cuid())
+  painPointId String    @unique
+  score       Int
+  notes       String?
+  painPoint   PainPoint @relation(fields: [painPointId], references: [id], onDelete: Cascade)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model GovernanceRisk {
+  id          String    @id @default(cuid())
+  auditId     String
+  painPointId String?
+  risk        String
+  mitigation  String?
+  level       Int
+  audit       Audit     @relation(fields: [auditId], references: [id], onDelete: Cascade)
+  painPoint   PainPoint? @relation(fields: [painPointId], references: [id], onDelete: Cascade)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model ReportSection {
+  id        String   @id @default(cuid())
+  auditId   String
+  title     String
+  content   String
+  position  Int
+  audit     Audit    @relation(fields: [auditId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([auditId, position])
+}
